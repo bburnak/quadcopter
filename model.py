@@ -47,7 +47,8 @@ class Drone:
         self.g = 9.81  # Gravitational acceleration
         self.dt = 0.1  # s
 
-        self.historian = {'t':[], 'x': [], 'y': [], 'z': [], 'T1': [], 'T2':[], 'T3': [], 'T4': []}
+        self.historian = {'t':[], 'x': [], 'y': [], 'z': [], 'T1': [], 'T2':[], 'T3': [], 'T4': [],
+                          'ax': [], 'ay': [], 'az': [], 'vx': [], 'vy': [], 'vz': [], }
 
     def equations_of_motion(self):
         # linear dynamics as a function of thrust
@@ -76,18 +77,18 @@ class Drone:
         self.pdot = ((1/self.Ixx)
                      * self.L
                      * (self.T2 - self.T4)
-                     * self.k_drag_angular * self.p
+                     - self.k_drag_angular * self.p
                      )
         self.qdot = ((1 / self.Iyy)
                      * self.L
                      * (self.T3 - self.T1)
-                     * self.k_drag_angular * self.q
+                     - self.k_drag_angular * self.q
                      )
 
         self.rdot = ((1 / self.Izz)
                      * self.L
                      * (self.T1 - self.T2 + self.T3 - self.T4)
-                     * self.k_drag_angular * self.r
+                     - self.k_drag_angular * self.r
                      )
 
     def derivatives(self):
@@ -136,6 +137,12 @@ class Drone:
         self.historian['T2'].append(self.T2)
         self.historian['T3'].append(self.T3)
         self.historian['T4'].append(self.T4)
+        self.historian['ax'].append(self.x)
+        self.historian['ay'].append(self.y)
+        self.historian['az'].append(self.z)
+        self.historian['vx'].append(self.x)
+        self.historian['vy'].append(self.y)
+        self.historian['vz'].append(self.z)
 
     def plot(self):
         fig, ax = plt.subplots(7, 1)
@@ -147,15 +154,18 @@ class Drone:
         ax[5].plot(self.historian['t'], self.historian['T3'])
         ax[6].plot(self.historian['t'], self.historian['T4'])
 
-        fig.savefig("C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output\\test.png", dpi=300)
+        fig.savefig("C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output\\detailed_profile.png", dpi=300)
+
+        fig, ax = plt.subplots()
+        ax3d = plt.axes(projection='3d')
+        ax3d.scatter3D(self.historian['x'], self.historian['y'], self.historian['z'])
+        fig.savefig("C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output\\projectile_3d.png", dpi=300)
 
     def simulate(self):
         while self.t < 10:
-            print(f"Time: {self.t:.1f}\t||\t Coordinates:\t{self.x:.1f}\t|\t {self.y:.1f}\t|\t{self.z:.1f}")
+            # print(f"Time: {self.t:.1f}\t||\t Coordinates:\t{self.x:.1f}\t|\t {self.y:.1f}\t|\t{self.z:.1f}")
+            print(f"Time: {self.t:.1f}\t||\t Acceleration:\t{self.ax:.1f}\t|\t {self.ay:.1f}\t|\t{self.az:.3f}")
             self.update_thrust()
             self.equations_of_motion()
             self.derivatives()
             self.record_data()
-
-
-
