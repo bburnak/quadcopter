@@ -1,5 +1,5 @@
-from model import Drone
-from system_identification import SystemIdentification
+from functions.model import Drone
+from functions.system_identification import SystemIdentification
 
 
 def workflow_main():
