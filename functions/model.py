@@ -158,14 +158,22 @@ class Drone:
 
         self.historian = {'t':[], 'x': [], 'y': [], 'z': [], 'T1': [], 'T2':[], 'T3': [], 'T4': [],
                           'ax': [], 'ay': [], 'az': [], 'vx': [], 'vy': [], 'vz': [],
-                          'pdot': [], 'qdot': [], 'rdot': []}
+                          'pdot': [], 'qdot': [], 'rdot': [],
+                          'p': [], 'q': [], 'r':[]}
 
 
     def update_thrust(self):
-        self.T1 = 10*math.sin(self.t * math.pi)
-        self.T2 = 10*math.sin(self.t * math.pi * 2)
-        self.T3 = 10*math.sin(self.t * math.pi * 3)
-        self.T4 = 10*math.sin(self.t * math.pi * 4)
+        ss_thrust = 0.2455
+        stabilizer_factor = 1
+        self.T1 = ss_thrust * stabilizer_factor * (1 + math.sin(self.t * math.pi)/100)
+        self.T2 = ss_thrust * stabilizer_factor
+        self.T3 = ss_thrust * stabilizer_factor
+        self.T4 = ss_thrust * stabilizer_factor
+
+        # self.T1 = 1*math.sin(self.t * math.pi)
+        # self.T2 = 1*math.sin(self.t * math.pi + math.pi/5)
+        # self.T3 = 1*math.sin(self.t * math.pi + 2*math.pi/5)
+        # self.T4 = 1*math.sin(self.t * math.pi + 3*math.pi/5)
 
         self.thrust = np.array([self.T1, self.T2, self.T3, self.T4])
 
@@ -187,6 +195,10 @@ class Drone:
         self.historian['pdot'].append(self.pdot)
         self.historian['qdot'].append(self.qdot)
         self.historian['rdot'].append(self.rdot)
+        self.historian['p'].append(self.p)
+        self.historian['q'].append(self.q)
+        self.historian['r'].append(self.r)
+
 
     def plot(self):
         fig, ax = plt.subplots(7, 1)
@@ -198,7 +210,20 @@ class Drone:
         ax[5].plot(self.historian['t'], self.historian['T3'])
         ax[6].plot(self.historian['t'], self.historian['T4'])
 
-        fig.savefig("C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output\\detailed_profile.png", dpi=300)
+        fig.savefig("C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output\\detailed_linearprofile.png", dpi=300)
+
+        fig, ax = plt.subplots(7, 1)
+        ax[0].plot(self.historian['t'], self.historian['p'])
+        ax[1].plot(self.historian['t'], self.historian['q'])
+        ax[2].plot(self.historian['t'], self.historian['r'])
+        ax[3].plot(self.historian['t'], self.historian['T1'])
+        ax[4].plot(self.historian['t'], self.historian['T2'])
+        ax[5].plot(self.historian['t'], self.historian['T3'])
+        ax[6].plot(self.historian['t'], self.historian['T4'])
+
+        fig.savefig(
+            "C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output\\detailed_angular_profile.png",
+            dpi=300)
 
         fig, ax = plt.subplots()
         ax3d = plt.axes(projection='3d')

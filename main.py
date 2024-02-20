@@ -24,5 +24,5 @@ def run_cli(workflow):
 
 
 if __name__ == '__main__':
-    run_cli('system_identification')
+    run_cli('main')
 

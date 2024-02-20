@@ -48,7 +48,6 @@ class SystemIdentification:
         #                                self.drone.pdot, self.drone.qdot, self.drone.rdot]).reshape((12, 1))
         self.system_output = np.array([self.drone.x, self.drone.y, self.drone.z]).reshape((3, 1))
 
-
     def simulate_kalman_filter(self):
         # should separate training and testing instances for the drones
         self.drone.initialize()
