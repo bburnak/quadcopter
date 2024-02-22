@@ -1,4 +1,4 @@
-from functions.model import Drone
+from functions.model import Drone, DronePyomo
 from functions.system_identification import SystemIdentification
 
 
@@ -15,14 +15,22 @@ def workflow_system_identification():
     si = SystemIdentification(drone)
     si.run()
 
+def workflow_dynamic_optimization():
+    print('Performing dynamic optimization')
+    pyo_model = DronePyomo()
+
 
 def run_cli(workflow):
     if workflow == 'main':
         workflow_main()
     elif workflow == 'system_identification':
         workflow_system_identification()
+    elif workflow == 'dynamic_optimization':
+        workflow_dynamic_optimization()
+    else:
+        raise ValueError("Unknown workflow")
 
 
 if __name__ == '__main__':
-    run_cli('main')
+    run_cli('dynamic_optimization')
 
