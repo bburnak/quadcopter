@@ -252,12 +252,19 @@ class Drone:
 class DronePyomo:
     def __init__(self):
         self.model = pyo.AbstractModel()
+        self.instance = None
+        self.results = None
 
-        self.model.t = pyd.ContinuousSet(bounds=(0, 1))
+        self.define_sets()
         self.define_vars()
         self.define_derivatives()
         self.define_parameters()
         self.define_constraints()
+        self.define_objective()
+
+    def define_sets(self):
+        print('Defining sets')
+        self.model.t = pyd.ContinuousSet(bounds=(0, 1))
 
     def define_vars(self):
         print('Defining variables')
@@ -304,96 +311,179 @@ class DronePyomo:
 
     def define_parameters(self):
         print('Defining parameters')
-        self.model.m = 0.1  # Mass
-        self.model.L = 0.25  # Arm length
-        self.model.Ixx = 0.1  # Moment of inertia around x-axis
-        self.model.Iyy = 0.1  # Moment of inertia around y-axis
-        self.model.Izz = 0.2  # Moment of inertia around z-axis
-        self.model.k_drag_linear = 0.1  # Linear drag coefficient
-        self.model.k_drag_angular = 0.05  # Angular drag coefficient
-        self.model.g = 9.81  # Gravitational acceleration
-
-    def cons_linear_acceleration_x(self):
-        return self.model.ax == ((1/self.model.m)
-                                 * (pyo.sin(self.model.roll)*pyo.cos(self.model.pitch)*pyo.sin(self.model.yaw)
-                                    + pyo.cos(self.model.roll)*pyo.sin(self.model.pitch)*pyo.cos(self.model.yaw))
-                                 * (self.model.T1 + self.model.T2 + self.model.T3 + self.model.T4)
-                                 - self.model.K_drag_linear * self.model.vx
-                                 ) * self.model.time
-
-    def cons_linear_acceleration_y(self):
-        return self.model.ay == ((1/self.model.m)
-                                 * (-pyo.cos(self.model.roll) * pyo.cos(self.model.pitch) * pyo.sin(self.model.yaw)
-                                    + pyo.sin(self.model.roll) * pyo.sin(self.model.pitch) * pyo.cos(self.model.yaw))
-                                 * (self.model.T1 + self.model.T2 + self.model.T3 + self.model.T4)
-                                 - self.model.k_drag_linear * self.model.vy
-                                 ) * self.model.time
-
-    def cons_linear_acceleration_z(self):
-        return self.model.az == ((1/self.model.m)
-                                 * -pyo.cos(self.model.roll) * pyo.cos(self.model.pitch)
-                                 * (self.model.T1 + self.model.T2 + self.model.T3 + self.model.T4)
-                                 - self.model.k_drag_linear * self.model.vz
-                                 + self.model.g
-                                 ) * self.model.time
-
-    def cons_angular_dynamics_pdot(self):
-        return self.model.pdot == ((1/self.model.Ixx)
-                                   * self.model.L
-                                   * (self.model.T2 - self.model.T4)
-                                   - self.model.k_drag_angular * self.model.p
-                                   ) * self.model.time
-
-    def cons_angular_dynamics_qdot(self):
-        return self.model.qdot == ((1 / self.model.Iyy)
-                                   * self.model.L
-                                   * (self.model.T3 - self.model.T1)
-                                   - self.model.k_drag_angular * self.model.q
-                                   ) * self.model.time
-
-    def cons_angular_dynamics_rdot(self):
-        return self.model.rdot == ((1 / self.model.Izz)
-                                   * self.model.L
-                                   * (self.model.T1 - self.model.T2 + self.model.T3 - self.model.T4)
-                                   - self.model.k_drag_angular * self.model.r
-                                   ) * self.model.time
+        self.model.m = pyo.Param(initialize=0.1)  # Mass
+        self.model.L = pyo.Param(initialize=0.25)  # Arm length
+        self.model.Ixx = pyo.Param(initialize=0.1)  # Moment of inertia around x-axis
+        self.model.Iyy = pyo.Param(initialize=0.1)  # Moment of inertia around y-axis
+        self.model.Izz = pyo.Param(initialize=0.2)  # Moment of inertia around z-axis
+        self.model.k_drag_linear = pyo.Param(initialize=0.1)  # Linear drag coefficient
+        self.model.k_drag_angular = pyo.Param(initialize=0.05)  # Angular drag coefficient
+        self.model.g = pyo.Param(initialize=9.81)  # Gravitational acceleration
 
     def equations_of_motion(self):
         print('Defining equations of motion')
 
+        def cons_linear_acceleration_x(model, t):
+            if t == 0:
+                return pyo.Constraint.Skip
+            return model.ax[t] == ((1 / model.m)
+                                   * (pyo.sin(model.roll[t]) * pyo.cos(model.pitch[t]) * pyo.sin(model.yaw[t])
+                                      + pyo.cos(model.roll[t]) * pyo.sin(model.pitch[t]) * pyo.cos(model.yaw[t]))
+                                   * (model.T1[t] + model.T2[t] + model.T3[t] + model.T4[t])
+                                   - model.k_drag_linear * model.vx[t]
+                                   ) * model.time
+
+        def cons_linear_acceleration_y(model, t):
+            if t == 0:
+                return pyo.Constraint.Skip
+            return model.ay[t] == ((1 / model.m)
+                                   * (-pyo.cos(model.roll[t]) * pyo.cos(model.pitch[t]) * pyo.sin(model.yaw[t])
+                                      + pyo.sin(model.roll[t]) * pyo.sin(model.pitch[t]) * pyo.cos(model.yaw[t]))
+                                   * (model.T1[t] + model.T2[t] + model.T3[t] + model.T4[t])
+                                   - model.k_drag_linear * model.vy[t]
+                                   ) * model.time
+
+        def cons_linear_acceleration_z(model, t):
+            if t == 0:
+                return pyo.Constraint.Skip
+            return model.az[t] == ((1 / model.m)
+                                   * -pyo.cos(model.roll[t]) * pyo.cos(model.pitch[t])
+                                   * (model.T1[t] + model.T2[t] + model.T3[t] + model.T4[t])
+                                   - model.k_drag_linear * model.vz[t]
+                                   + model.g
+                                   ) * model.time
+
+        def cons_angular_dynamics_pdot(model, t):
+            if t == 0:
+                return pyo.Constraint.Skip
+            return model.pdot[t] == ((1 / model.Ixx)
+                                     * model.L
+                                     * (model.T2[t] - model.T4[t])
+                                     - model.k_drag_angular * model.p[t]
+                                     ) * model.time
+
+        def cons_angular_dynamics_qdot(model, t):
+            if t == 0:
+                return pyo.Constraint.Skip
+            return model.qdot[t] == ((1 / model.Iyy)
+                                     * model.L
+                                     * (model.T3[t] - model.T1[t])
+                                     - model.k_drag_angular * model.q[t]
+                                     ) * model.time
+
+        def cons_angular_dynamics_rdot(model, t):
+            if t == 0:
+                return pyo.Constraint.Skip
+            return model.rdot[t] == ((1 / model.Izz)
+                                     * model.L
+                                     * (model.T1[t] - model.T2[t] + model.T3[t] - model.T4[t])
+                                     - model.k_drag_angular * model.r[t]
+                                     ) * model.time
+
         # linear dynamics
-        self.model.cons_linear_acceleration_x = pyo.Constraint(rule=self.cons_linear_acceleration_x)
-        self.model.cons_linear_acceleration_y = pyo.Constraint(rule=self.cons_linear_acceleration_y)
-        self.model.cons_linear_acceleration_z = pyo.Constraint(rule=self.cons_linear_acceleration_z)
+        self.model.cons_linear_acceleration_x = pyo.Constraint(self.model.t, rule=cons_linear_acceleration_x)
+        self.model.cons_linear_acceleration_y = pyo.Constraint(self.model.t, rule=cons_linear_acceleration_y)
+        self.model.cons_linear_acceleration_z = pyo.Constraint(self.model.t, rule=cons_linear_acceleration_z)
 
         # angular dynamics
-        self.model.cons_angular_dynamics_pdot = pyo.Constraint(rule=self.cons_angular_dynamics_pdot)
-        self.model.cons_angular_dynamics_qdot = pyo.Constraint(rule=self.cons_angular_dynamics_qdot)
-        self.model.cons_angular_dynamics_rdot = pyo.Constraint(rule=self.cons_angular_dynamics_rdot)
+        self.model.cons_angular_dynamics_pdot = pyo.Constraint(self.model.t, rule=cons_angular_dynamics_pdot)
+        self.model.cons_angular_dynamics_qdot = pyo.Constraint(self.model.t, rule=cons_angular_dynamics_qdot)
+        self.model.cons_angular_dynamics_rdot = pyo.Constraint(self.model.t, rule=cons_angular_dynamics_rdot)
 
     def terminal_constraints(self):
         print('Adding steady state terminal constraints.')
-        # self.model.terminal_constraints = pyo.ConstraintList()
-        #
-        # # Velocity
-        # self.model.terminal_constraints.add(expr=self.model.vx[1] == 0)
-        # self.model.terminal_constraints.add(expr=self.model.vy[1] == 0)
-        # self.model.terminal_constraints.add(expr=self.model.vz[1] == 0)
-        #
-        # # Acceleration
-        # self.model.terminal_constraints.add(expr=self.model.ax[1] == 0)
-        # self.model.terminal_constraints.add(expr=self.model.ay[1] == 0)
-        # self.model.terminal_constraints.add(expr=self.model.az[1] == 0)
-        #
-        # # Angular acceleration
-        # self.model.terminal_constraints.add(expr=self.model.pdot[1] == 0)
-        # self.model.terminal_constraints.add(expr=self.model.qdot[1] == 0)
-        # self.model.terminal_constraints.add(expr=self.model.rdot[1] == 0)
-        #
-        # # Angular velocity
-        # self.model.terminal_constraints.add(expr=self.model.p[1] == 0)
-        # self.model.terminal_constraints.add(expr=self.model.q[1] == 0)
-        # self.model.terminal_constraints.add(expr=self.model.r[1] == 0)
+
+        def terminal_constraints_vx(model, t):
+            if t == 1:
+                return model.vx[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def terminal_constraints_vy(model, t):
+            if t == 1:
+                return model.vy[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def terminal_constraints_vz(model, t):
+            if t == 1:
+                return model.vz[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def terminal_constraints_ax(model, t):
+            if t == 1:
+                return model.ax[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def terminal_constraints_ay(model, t):
+            if t == 1:
+                return model.ay[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def terminal_constraints_az(model, t):
+            if t == 1:
+                return model.az[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def terminal_constraints_pdot(model, t):
+            if t == 1:
+                return model.pdot[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def terminal_constraints_qdot(model, t):
+            if t == 1:
+                return model.qdot[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def terminal_constraints_rdot(model, t):
+            if t == 1:
+                return model.rdot[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def terminal_constraints_p(model, t):
+            if t == 1:
+                return model.p[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def terminal_constraints_q(model, t):
+            if t == 1:
+                return model.q[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def terminal_constraints_r(model, t):
+            if t == 1:
+                return model.r[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        # Velocity
+        self.model.terminal_constraints_vx = pyo.Constraint(self.model.t, rule=terminal_constraints_vx)
+        self.model.terminal_constraints_vy = pyo.Constraint(self.model.t, rule=terminal_constraints_vy)
+        self.model.terminal_constraints_vz = pyo.Constraint(self.model.t, rule=terminal_constraints_vz)
+
+        # Acceleration
+        self.model.terminal_constraints_ax = pyo.Constraint(self.model.t, rule=terminal_constraints_ax)
+        self.model.terminal_constraints_ay = pyo.Constraint(self.model.t, rule=terminal_constraints_ay)
+        self.model.terminal_constraints_az = pyo.Constraint(self.model.t, rule=terminal_constraints_az)
+
+        # Angular acceleration
+        self.model.terminal_constraints_pdot = pyo.Constraint(self.model.t, rule=terminal_constraints_pdot)
+        self.model.terminal_constraints_qdot = pyo.Constraint(self.model.t, rule=terminal_constraints_qdot)
+        self.model.terminal_constraints_rdot = pyo.Constraint(self.model.t, rule=terminal_constraints_rdot)
+
+        # Angular velocity
+        self.model.terminal_constraints_p = pyo.Constraint(self.model.t, rule=terminal_constraints_p)
+        self.model.terminal_constraints_q = pyo.Constraint(self.model.t, rule=terminal_constraints_q)
+        self.model.terminal_constraints_r = pyo.Constraint(self.model.t, rule=terminal_constraints_r)
 
     def obj_minimize_time(self):
         print('Objective: minimize time')
@@ -407,3 +497,22 @@ class DronePyomo:
     def define_objective(self):
         print('Defining objective function')
         self.model.obj_minimize_time = pyo.Objective(rule=self.obj_minimize_time())
+
+    def discretize(self, nfe=10, ncp=3, scheme='LAGRANGE-RADAU'):
+        print(f'Discretizing model with the following specs:')
+        print(f'*Number of finite elements:\t{nfe}')
+        print(f'*Number of collocation points:\t{ncp}')
+        print(f'*Discretization scheme:\t{scheme}')
+        discretizer = pyo.TransformationFactory('dae.collocation')
+        discretizer.apply_to(self.instance, nfe=nfe, ncp=ncp, scheme=scheme)
+
+    def solve(self, solver='ipopt', verbose=False):
+        print(f'Solving DAE using {solver}')
+        self.results = pyo.SolverFactory(solver).solve(self.instance, tee=verbose)
+
+    def create_model(self):
+        print('Creating model')
+        self.instance = self.model.create_instance()
+
+    def print_results(self):
+        self.instance.display()
