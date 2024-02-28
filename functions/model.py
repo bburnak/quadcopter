@@ -202,7 +202,6 @@ class Drone:
         self.historian['q'].append(self.q)
         self.historian['r'].append(self.r)
 
-
     def plot(self):
         fig, ax = plt.subplots(7, 1)
         ax[0].plot(self.historian['t'], self.historian['x'])
@@ -254,6 +253,7 @@ class DronePyomo:
         self.model = pyo.AbstractModel()
         self.instance = None
         self.results = None
+        self.historian = None
 
         self.define_sets()
         self.define_vars()
@@ -508,7 +508,9 @@ class DronePyomo:
 
     def solve(self, solver='ipopt', verbose=False):
         print(f'Solving DAE using {solver}')
+        self.discretize()
         self.results = pyo.SolverFactory(solver).solve(self.instance, tee=verbose)
+        self.to_historian()
 
     def create_model(self):
         print('Creating model')
@@ -516,3 +518,44 @@ class DronePyomo:
 
     def print_results(self):
         self.instance.display()
+
+    def to_historian(self):
+        print('Writing results to historian')
+        data = {'t': [t*pyo.value(self.instance.time) for t in list(self.instance.t.data())],
+                'x': pyo.value(self.instance.x[:]),
+                'y': pyo.value(self.instance.y[:]),
+                'z': pyo.value(self.instance.z[:]),
+                'roll': pyo.value(self.instance.roll[:]),
+                'pitch': pyo.value(self.instance.pitch[:]),
+                'yaw': pyo.value(self.instance.yaw[:]),
+                'p': pyo.value(self.instance.p[:]),
+                'q': pyo.value(self.instance.q[:]),
+                'r': pyo.value(self.instance.r[:]),
+                'T1': pyo.value(self.instance.T1[:]),
+                'T2': pyo.value(self.instance.T2[:]),
+                'T3': pyo.value(self.instance.T3[:]),
+                'T4': pyo.value(self.instance.T4[:]),
+                'vx': pyo.value(self.instance.vx[:]),
+                'vy': pyo.value(self.instance.vy[:]),
+                'vz': pyo.value(self.instance.vz[:]),
+                'ax': pyo.value(self.instance.ax[:]),
+                'ay': pyo.value(self.instance.ay[:]),
+                'az': pyo.value(self.instance.az[:]),
+                'pdot': pyo.value(self.instance.pdot[:]),
+                'qdot': pyo.value(self.instance.qdot[:]),
+                'rdot': pyo.value(self.instance.rdot[:])
+                }
+        self.historian = data
+
+
+    def plot_historian(self):
+        print('Plotting optimized profile')
+        fig, ax = plt.subplots(3,1)
+        ax[0].plot(self.historian['t'], self.historian['x'])
+        ax[1].plot(self.historian['t'], self.historian['y'])
+        ax[2].plot(self.historian['t'], self.historian['z'])
+
+        fig.savefig(
+            "C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output\\optimized_profile.png",
+            dpi=300)
+

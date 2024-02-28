@@ -20,9 +20,8 @@ def workflow_dynamic_optimization():
     print('Performing dynamic optimization')
     pyo_model = DronePyomo()
     pyo_model.create_model()
-    pyo_model.discretize()
     pyo_model.solve(verbose=True)
-
+    pyo_model.plot_historian()
 
 
 def run_cli(workflow):
