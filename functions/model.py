@@ -173,10 +173,10 @@ class Drone:
         self.T3 = ss_thrust * stabilizer_factor
         self.T4 = ss_thrust * stabilizer_factor
 
-        # self.T1 = 1*math.sin(self.t * math.pi)
-        # self.T2 = 1*math.sin(self.t * math.pi + math.pi/5)
-        # self.T3 = 1*math.sin(self.t * math.pi + 2*math.pi/5)
-        # self.T4 = 1*math.sin(self.t * math.pi + 3*math.pi/5)
+        self.T1 = 1*math.sin(self.t * math.pi)
+        self.T2 = 1*math.sin(self.t * math.pi + math.pi/5)
+        self.T3 = 1*math.sin(self.t * math.pi + 2*math.pi/5)
+        self.T4 = 1*math.sin(self.t * math.pi + 3*math.pi/5)
 
         self.thrust = np.array([self.T1, self.T2, self.T3, self.T4])
 
@@ -268,7 +268,7 @@ class DronePyomo:
 
     def define_vars(self):
         print('Defining variables')
-        self.model.time = pyo.Var()
+        self.model.time = pyo.Var(within=pyo.NonNegativeReals)
 
         # Cartesian coordinates of location
         self.model.x = pyo.Var(self.model.t)
@@ -286,10 +286,10 @@ class DronePyomo:
         self.model.r = pyo.Var(self.model.t)
 
         # Thrust
-        self.model.T1 = pyo.Var(self.model.t)
-        self.model.T2 = pyo.Var(self.model.t)
-        self.model.T3 = pyo.Var(self.model.t)
-        self.model.T4 = pyo.Var(self.model.t)
+        self.model.T1 = pyo.Var(self.model.t, bounds=(0, 0.1))
+        self.model.T2 = pyo.Var(self.model.t, bounds=(0, 0.1))
+        self.model.T3 = pyo.Var(self.model.t, bounds=(0, 0.1))
+        self.model.T4 = pyo.Var(self.model.t, bounds=(0, 0.1))
 
     def define_derivatives(self):
         print('Defining derivative variables')
@@ -492,13 +492,13 @@ class DronePyomo:
     def define_constraints(self):
         print('Defining constraints')
         self.equations_of_motion()
-        self.terminal_constraints()
+        # self.terminal_constraints()
 
     def define_objective(self):
         print('Defining objective function')
         self.model.obj_minimize_time = pyo.Objective(rule=self.obj_minimize_time())
 
-    def discretize(self, nfe=10, ncp=3, scheme='LAGRANGE-RADAU'):
+    def discretize(self, nfe=5, ncp=3, scheme='LAGRANGE-RADAU'):
         print(f'Discretizing model with the following specs:')
         print(f'*Number of finite elements:\t{nfe}')
         print(f'*Number of collocation points:\t{ncp}')
@@ -517,7 +517,9 @@ class DronePyomo:
         self.instance = self.model.create_instance()
 
     def print_results(self):
-        self.instance.display()
+        # self.instance.display()
+        # self.instance.vx.pprint()
+        self.instance.cons_linear_acceleration_z.pprint()
 
     def to_historian(self):
         print('Writing results to historian')
@@ -559,3 +561,97 @@ class DronePyomo:
             "C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output\\optimized_profile.png",
             dpi=300)
 
+    def set_initial_conditions(self):
+        print('Setting initial conditions')
+
+        def initial_condition_vx(model, t):
+            if t == 0:
+                return model.vx[t] == 0.01
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_vy(model, t):
+            if t == 0:
+                return model.vy[t] == 1
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_vz(model, t):
+            if t == 0:
+                return model.vz[t] == 1
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_ax(model, t):
+            if t == 0:
+                return model.ax[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_ay(model, t):
+            if t == 0:
+                return model.ay[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_az(model, t):
+            if t == 0:
+                return model.az[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_pdot(model, t):
+            if t == 0:
+                return model.pdot[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_qdot(model, t):
+            if t == 0:
+                return model.qdot[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_rdot(model, t):
+            if t == 0:
+                return model.rdot[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_p(model, t):
+            if t == 0:
+                return model.p[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_q(model, t):
+            if t == 0:
+                return model.q[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_r(model, t):
+            if t == 0:
+                return model.r[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        # Velocity
+        self.instance.initial_condition_vx = pyo.Constraint(self.instance.t, rule=initial_condition_vx)
+        self.instance.initial_condition_vy = pyo.Constraint(self.instance.t, rule=initial_condition_vy)
+        self.instance.initial_condition_vz = pyo.Constraint(self.instance.t, rule=initial_condition_vz)
+
+        # Acceleration
+        self.instance.initial_condition_ax = pyo.Constraint(self.instance.t, rule=initial_condition_ax)
+        self.instance.initial_condition_ay = pyo.Constraint(self.instance.t, rule=initial_condition_ay)
+        self.instance.initial_condition_az = pyo.Constraint(self.instance.t, rule=initial_condition_az)
+
+        # Angular acceleration
+        self.instance.initial_condition_pdot = pyo.Constraint(self.instance.t, rule=initial_condition_pdot)
+        self.instance.initial_condition_qdot = pyo.Constraint(self.instance.t, rule=initial_condition_qdot)
+        self.instance.initial_condition_rdot = pyo.Constraint(self.instance.t, rule=initial_condition_rdot)
+
+        # Angular velocity
+        self.instance.initial_condition_p = pyo.Constraint(self.instance.t, rule=initial_condition_p)
+        self.instance.initial_condition_q = pyo.Constraint(self.instance.t, rule=initial_condition_q)
+        self.instance.initial_condition_r = pyo.Constraint(self.instance.t, rule=initial_condition_r)
