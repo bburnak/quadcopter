@@ -164,7 +164,6 @@ class Drone:
                           'pdot': [], 'qdot': [], 'rdot': [],
                           'p': [], 'q': [], 'r': []}
 
-
     def update_thrust(self):
         ss_thrust = 0.2455
         stabilizer_factor = 1
@@ -407,7 +406,7 @@ class DronePyomo:
 
         def terminal_constraints_vz(model, t):
             if t == 1:
-                return model.vz[t] == 0
+                return model.vz[t] == 10
             else:
                 return pyo.Constraint.Skip
 
@@ -470,20 +469,20 @@ class DronePyomo:
         self.model.terminal_constraints_vy = pyo.Constraint(self.model.t, rule=terminal_constraints_vy)
         self.model.terminal_constraints_vz = pyo.Constraint(self.model.t, rule=terminal_constraints_vz)
 
-        # Acceleration
-        self.model.terminal_constraints_ax = pyo.Constraint(self.model.t, rule=terminal_constraints_ax)
-        self.model.terminal_constraints_ay = pyo.Constraint(self.model.t, rule=terminal_constraints_ay)
-        self.model.terminal_constraints_az = pyo.Constraint(self.model.t, rule=terminal_constraints_az)
-
-        # Angular acceleration
-        self.model.terminal_constraints_pdot = pyo.Constraint(self.model.t, rule=terminal_constraints_pdot)
-        self.model.terminal_constraints_qdot = pyo.Constraint(self.model.t, rule=terminal_constraints_qdot)
-        self.model.terminal_constraints_rdot = pyo.Constraint(self.model.t, rule=terminal_constraints_rdot)
-
-        # Angular velocity
-        self.model.terminal_constraints_p = pyo.Constraint(self.model.t, rule=terminal_constraints_p)
-        self.model.terminal_constraints_q = pyo.Constraint(self.model.t, rule=terminal_constraints_q)
-        self.model.terminal_constraints_r = pyo.Constraint(self.model.t, rule=terminal_constraints_r)
+        # # Acceleration
+        # self.model.terminal_constraints_ax = pyo.Constraint(self.model.t, rule=terminal_constraints_ax)
+        # self.model.terminal_constraints_ay = pyo.Constraint(self.model.t, rule=terminal_constraints_ay)
+        # self.model.terminal_constraints_az = pyo.Constraint(self.model.t, rule=terminal_constraints_az)
+        #
+        # # Angular acceleration
+        # self.model.terminal_constraints_pdot = pyo.Constraint(self.model.t, rule=terminal_constraints_pdot)
+        # self.model.terminal_constraints_qdot = pyo.Constraint(self.model.t, rule=terminal_constraints_qdot)
+        # self.model.terminal_constraints_rdot = pyo.Constraint(self.model.t, rule=terminal_constraints_rdot)
+        #
+        # # Angular velocity
+        # self.model.terminal_constraints_p = pyo.Constraint(self.model.t, rule=terminal_constraints_p)
+        # self.model.terminal_constraints_q = pyo.Constraint(self.model.t, rule=terminal_constraints_q)
+        # self.model.terminal_constraints_r = pyo.Constraint(self.model.t, rule=terminal_constraints_r)
 
     def obj_minimize_time(self):
         print('Objective: minimize time')
@@ -492,7 +491,7 @@ class DronePyomo:
     def define_constraints(self):
         print('Defining constraints')
         self.equations_of_motion()
-        # self.terminal_constraints()
+        self.terminal_constraints()
 
     def define_objective(self):
         print('Defining objective function')
@@ -518,8 +517,8 @@ class DronePyomo:
 
     def print_results(self):
         # self.instance.display()
-        # self.instance.vx.pprint()
-        self.instance.cons_linear_acceleration_z.pprint()
+        self.instance.vz.pprint()
+        self.instance.terminal_constraints_vy.pprint()
 
     def to_historian(self):
         print('Writing results to historian')
@@ -549,13 +548,18 @@ class DronePyomo:
                 }
         self.historian = data
 
-
     def plot_historian(self):
         print('Plotting optimized profile')
-        fig, ax = plt.subplots(3,1)
+        fig, ax = plt.subplots(3, 1)
         ax[0].plot(self.historian['t'], self.historian['x'])
         ax[1].plot(self.historian['t'], self.historian['y'])
         ax[2].plot(self.historian['t'], self.historian['z'])
+
+        ax[0].set_ylabel('x')
+        ax[1].set_ylabel('y')
+        ax[2].set_ylabel('z')
+        ax[2].set_xlabel('time')
+        plt.title('Position')
 
         fig.savefig(
             "C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output\\optimized_profile.png",
@@ -564,9 +568,27 @@ class DronePyomo:
     def set_initial_conditions(self):
         print('Setting initial conditions')
 
+        def initial_condition_x(model, t):
+            if t == 0:
+                return model.x[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_y(model, t):
+            if t == 0:
+                return model.y[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
+        def initial_condition_z(model, t):
+            if t == 0:
+                return model.z[t] == 0
+            else:
+                return pyo.Constraint.Skip
+
         def initial_condition_vx(model, t):
             if t == 0:
-                return model.vx[t] == 0.01
+                return model.vx[t] == 1
             else:
                 return pyo.Constraint.Skip
 
@@ -579,24 +601,6 @@ class DronePyomo:
         def initial_condition_vz(model, t):
             if t == 0:
                 return model.vz[t] == 1
-            else:
-                return pyo.Constraint.Skip
-
-        def initial_condition_ax(model, t):
-            if t == 0:
-                return model.ax[t] == 0
-            else:
-                return pyo.Constraint.Skip
-
-        def initial_condition_ay(model, t):
-            if t == 0:
-                return model.ay[t] == 0
-            else:
-                return pyo.Constraint.Skip
-
-        def initial_condition_az(model, t):
-            if t == 0:
-                return model.az[t] == 0
             else:
                 return pyo.Constraint.Skip
 
@@ -636,15 +640,15 @@ class DronePyomo:
             else:
                 return pyo.Constraint.Skip
 
+        # Position
+        self.instance.initial_condition_x = pyo.Constraint(self.instance.t, rule=initial_condition_x)
+        self.instance.initial_condition_y = pyo.Constraint(self.instance.t, rule=initial_condition_y)
+        self.instance.initial_condition_z = pyo.Constraint(self.instance.t, rule=initial_condition_z)
+
         # Velocity
         self.instance.initial_condition_vx = pyo.Constraint(self.instance.t, rule=initial_condition_vx)
         self.instance.initial_condition_vy = pyo.Constraint(self.instance.t, rule=initial_condition_vy)
         self.instance.initial_condition_vz = pyo.Constraint(self.instance.t, rule=initial_condition_vz)
-
-        # Acceleration
-        self.instance.initial_condition_ax = pyo.Constraint(self.instance.t, rule=initial_condition_ax)
-        self.instance.initial_condition_ay = pyo.Constraint(self.instance.t, rule=initial_condition_ay)
-        self.instance.initial_condition_az = pyo.Constraint(self.instance.t, rule=initial_condition_az)
 
         # Angular acceleration
         self.instance.initial_condition_pdot = pyo.Constraint(self.instance.t, rule=initial_condition_pdot)

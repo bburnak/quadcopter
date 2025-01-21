@@ -3,7 +3,6 @@ from functions.system_identification import SystemIdentification
 
 
 def workflow_main():
-    print(f'Running main script.')
     drone = Drone()
     drone.simulate()
     drone.plot()
@@ -27,7 +26,8 @@ def workflow_dynamic_optimization():
 
 
 def run_cli(workflow):
-    if workflow == 'main':
+    print(f'Running main script.')
+    if workflow == 'simulate':
         workflow_main()
     elif workflow == 'system_identification':
         workflow_system_identification()
@@ -39,4 +39,4 @@ def run_cli(workflow):
 
 if __name__ == '__main__':
     run_cli('dynamic_optimization')
-
+    # run_cli('simulate')
