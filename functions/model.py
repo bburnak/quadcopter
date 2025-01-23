@@ -160,7 +160,7 @@ class Drone:
         self.qdot = 0
         self.rdot = 0
 
-        self.historian = {'t':[], 'x': [], 'y': [], 'z': [], 'T1': [], 'T2':[], 'T3': [], 'T4': [],
+        self.historian = {'t': [], 'x': [], 'y': [], 'z': [], 'T1': [], 'T2':[], 'T3': [], 'T4': [],
                           'ax': [], 'ay': [], 'az': [], 'vx': [], 'vy': [], 'vz': [],
                           'pdot': [], 'qdot': [], 'rdot': [],
                           'p': [], 'q': [], 'r': []}
@@ -249,7 +249,8 @@ class Drone:
 
 
 class DronePyomo:
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
         self.model = pyo.AbstractModel()
         self.instance = None
         self.results = None
@@ -549,24 +550,11 @@ class DronePyomo:
                 }
         self.historian = data
 
-    def plot_position_from_historian(self):
-        print('Plotting optimized profile')
-        fig, ax = plt.subplots(3, 1)
-        plt.title('Position')
-        ax[0].plot(self.historian['t'], self.historian['x'])
-        ax[1].plot(self.historian['t'], self.historian['y'])
-        ax[2].plot(self.historian['t'], self.historian['z'])
+    def plot_property_from_historian(self, title, *args, save_folder=None, **kwargs):
+        # If save_folder is not provided, use the default from self.config
+        if save_folder is None:
+            save_folder = self.config.get('output', '.')  # Fallback to '.' if 'output' key is missing
 
-        ax[0].set_ylabel('x')
-        ax[1].set_ylabel('y')
-        ax[2].set_ylabel('z')
-        ax[2].set_xlabel('time')
-
-        fig.savefig(
-            "C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output\\optimized_profile.png",
-            dpi=300)
-
-    def plot_property_from_historian(self, title, save_folder, *args, **kwargs):
         print(f'Plotting {title}')
         fig, ax = plt.subplots(len(args))
         plt.title(f'{title}')
@@ -575,19 +563,18 @@ class DronePyomo:
                                  self.historian[args[subplot_idx]['y_axis']])
             ax[subplot_idx].set_ylabel(args[subplot_idx]['y_axis'])
 
+        # Save the figure in the specified folder
         fig.savefig(os.path.join(save_folder, title), **kwargs)
 
     def plot_historian(self):
         print('Plot historian')
         self.plot_property_from_historian('Position',
-                                          "C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output",
                                           *[{'x_axis': 't', 'y_axis': 'x'},
                                             {'x_axis': 't', 'y_axis': 'y'},
                                             {'x_axis': 't', 'y_axis': 'z'}],
                                           dpi=300)
 
         self.plot_property_from_historian('Velocity',
-                                          'C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output',
                                           *[{'x_axis': 't', 'y_axis': 'vx'},
                                             {'x_axis': 't', 'y_axis': 'vy'},
                                             {'x_axis': 't', 'y_axis': 'vz'}],
@@ -595,7 +582,6 @@ class DronePyomo:
                                           )
 
         self.plot_property_from_historian('Acceleration',
-                                          'C:\\Users\\baris\\Documents\\Python Scripts\\projects\\database\\drone\\output',
                                           *[{'x_axis': 't', 'y_axis': 'ax'},
                                             {'x_axis': 't', 'y_axis': 'ay'},
                                             {'x_axis': 't', 'y_axis': 'az'}],
