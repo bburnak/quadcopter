@@ -1,19 +1,20 @@
 import argparse
 import yaml
 import os
-from functions.model import Drone, DronePyomo
+from functions.opt_model import DronePyomo
+from functions.simulation import Drone
 from functions.system_identification import SystemIdentification
 
 
-def workflow_main():
-    drone = Drone()
+def workflow_main(config):
+    drone = Drone(config)
     drone.simulate()
     drone.plot()
 
 
-def workflow_system_identification():
+def workflow_system_identification(config):
     print(f'Running system identification.')
-    drone = Drone()
+    drone = Drone(config)
     si = SystemIdentification(drone)
     si.run()
 
@@ -41,7 +42,28 @@ def parse_arguments() -> dict:
 
 
 def get_default_config() -> dict:
-    return {}
+    config = {
+        'physics': {
+            'gravitational_acceleration': 9.81
+        },
+        'specs': {
+            'thrust': {
+                'min': 0,
+                'max': 10
+            },
+            'mass': 0.1,
+            'arm_length': 0.25,
+            'Ixx': 0.1,
+            'Iyy': 0.1,
+            'Izz': 0.1,
+            'k_drag_linear': 0.1,
+            'k_drag_angular': 0.05,
+        },
+        'system_defaults': {
+            'delta_t': 0.1
+        }
+    }
+    return config
 
 
 def get_config_from_args(args: dict) -> dict:
@@ -65,7 +87,7 @@ def run_cli(workflow):
     config = get_config_from_args(args)
 
     if workflow == 'simulate':
-        workflow_main()
+        workflow_main(config)
     elif workflow == 'system_identification':
         workflow_system_identification()
     elif workflow == 'dynamic_optimization':
@@ -75,4 +97,4 @@ def run_cli(workflow):
 
 
 if __name__ == '__main__':
-    run_cli('dynamic_optimization')
+    run_cli('simulate')
